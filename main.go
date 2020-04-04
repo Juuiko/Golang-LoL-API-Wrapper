@@ -8,13 +8,12 @@ import (
 	"gonum.org/v1/plot/plotutil"
 	"gonum.org/v1/plot/vg"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-const key string = "api_key=RGAPI-f9c12a45-952b-499e-ada1-f208251d2eb3"
+const key string = "api_key=RGAPI-2acba61b-513f-4408-b47f-8e05b466e4a4"
 
 var numberOfPulls int = 0
 
@@ -149,18 +148,18 @@ type timelineEvents struct {
 func urlToStructSummoner(url string)summoner {
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 	//defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 
 	var data summoner
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 
 	return data
@@ -169,18 +168,18 @@ func urlToStructSummoner(url string)summoner {
 func urlToStructMatchHistory(url string)matchHistory {
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 	//defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 
 	var dataStruct matchHistory
 	err = json.Unmarshal(body, &dataStruct)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 
 	return dataStruct
@@ -189,18 +188,18 @@ func urlToStructMatchHistory(url string)matchHistory {
 func urlToStructMatchStats(url string)matchStats {
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 	//defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 
 	var dataStruct matchStats
 	err = json.Unmarshal(body, &dataStruct)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 
 	return dataStruct
@@ -209,18 +208,18 @@ func urlToStructMatchStats(url string)matchStats {
 func urlToTimeline(url string)timeline {
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 	//defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 
 	var dataStruct timeline
 	err = json.Unmarshal(body, &dataStruct)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 
 	return dataStruct
@@ -233,9 +232,9 @@ func summonerSearch(name string) summoner{
 	return urlToStructSummoner(url)
 }
 
-func matchHistorySearch(name string) matchHistory{
+func matchHistorySearch(name string, start int) matchHistory{
 	base := "https://euw1.api.riotgames.com/lol/match/v4/matchlists/by-account/"
-	filters := "queue=420&"
+	filters := "queue=420&beginIndex=" + strconv.Itoa(start) + "&"
 	accountId := string(summonerSearch(name).AccountId)
 	url := base+accountId+"?"+filters+key
 	fmt.Println(url)
@@ -260,26 +259,48 @@ func timelineSearch(matchId int) timeline{
 
 func main() {
 	sampleSize := 100
-	name := "Witzel"
+	name := "lnsecure mid"
 	m := 0
 	totalDeathsGraph := [60]float64{}
-	mH := matchHistorySearch(name)
+	mH0 := matchHistorySearch(name,0)
+	mH1 := matchHistorySearch(name,100)
+	mH2 := matchHistorySearch(name,200)
+	mH3 := matchHistorySearch(name,300)
+	mH4 := matchHistorySearch(name,400)
+	mH5 := matchHistorySearch(name,500)
+	mH6 := matchHistorySearch(name,600)
+	mH7 := matchHistorySearch(name,700)
+	mH8 := matchHistorySearch(name,800)
+	mH9 := matchHistorySearch(name,900)
+	mH0.Matches = append(mH0.Matches, mH1.Matches...)
+	mH0.Matches = append(mH0.Matches, mH2.Matches...)
+	mH0.Matches = append(mH0.Matches, mH3.Matches...)
+	mH0.Matches = append(mH0.Matches, mH4.Matches...)
+	mH0.Matches = append(mH0.Matches, mH5.Matches...)
+	mH0.Matches = append(mH0.Matches, mH6.Matches...)
+	mH0.Matches = append(mH0.Matches, mH7.Matches...)
+	mH0.Matches = append(mH0.Matches, mH8.Matches...)
+	mH0.Matches = append(mH0.Matches, mH9.Matches...)
+	fmt.Println(len(mH0.Matches))
+	summoner := summonerSearch(name)
+	summonerId := summoner.Id
+	time.Sleep(2*time.Minute)
 	for k := 0; k<sampleSize; k++ {
 		playerIdMatch := false
 		playerId := 0
-		matchStatistics := matchStatsSearch(mH.Matches[k].GameId)
+		matchStatistics := matchStatsSearch(mH0.Matches[k].GameId)
 		for l := 0; playerIdMatch==false; l++{
-			if matchStatistics.ParticipantIdentities[l].Player.SummonerName==name{
+			if matchStatistics.ParticipantIdentities[l].Player.SummonerId==summonerId {
 				playerId = matchStatistics.ParticipantIdentities[l].ParticipantId
 				playerIdMatch=true
 				}
 		}
-		timeline := timelineSearch(mH.Matches[k].GameId)
-		if numberOfPulls>90 {
+		timeline := timelineSearch(mH0.Matches[k].GameId)
+		if numberOfPulls>95 {
 			time.Sleep(2*time.Minute)
 			numberOfPulls = 0
 		}
-		fmt.Println(numberOfPulls)
+		fmt.Println(strconv.Itoa(k) + " games looked at")
 		for i := 0; i < len(timeline.Frames); i++ {
 			for j := 0; j < len(timeline.Frames[i].Events); j++ {
 				if timeline.Frames[i].Events[j].Type == "CHAMPION_KILL" && timeline.Frames[i].Events[j].VictimId == playerId {
@@ -293,7 +314,6 @@ func main() {
 	for i:=1; i< len(totalDeathsGraph); i++{
 		totalDeathsGraph[i]=totalDeathsGraph[i]/float64(sampleSize)
 	}
-
 	data := make(plotter.Values, 60)
 	for i:=0; i<60; i++ {
 		data[i]=totalDeathsGraph[i]
@@ -318,7 +338,7 @@ func main() {
 
 	p.Add(barsA)
 	p.Legend.Top = true
-	p.NominalX("1", "2", "3", "4", "5", "6", "7", "8", "9")
+	p.NominalX("0", "", "2", "", "4", "", "6", "", "8", "", "10", "", "12", "", "14", "", "16", "", "18", "", "20", "", "22", "", "24", "", "26", "", "28", "", "30", "", "32", "", "34", "", "36", "", "38", "", "40", "", "42", "", "44", "", "46", "", "48", "", "50", "", "52", "", "54", "", "56", "", "58", "", "60")
 
 	if err := p.Save(10*vg.Inch, 4*vg.Inch, "barchart.png"); err != nil {
 		panic(err)
