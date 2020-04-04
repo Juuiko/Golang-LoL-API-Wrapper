@@ -1,1 +1,1 @@
-# Golang-LoL-API-Wrapper
+# golang-lol-api-wrapper
