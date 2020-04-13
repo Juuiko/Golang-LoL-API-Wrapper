@@ -3,149 +3,153 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"strconv"
+	"time"
+
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/plotutil"
 	"gonum.org/v1/plot/vg"
-	"io/ioutil"
-	"net/http"
-	"strconv"
-	"time"
+	"gonum.org/v1/plot/vg/draw"
+	"gonum.org/v1/plot/vg/vgimg"
 )
 
-const key string = "api_key=RGAPI-2acba61b-513f-4408-b47f-8e05b466e4a4"
+const key string = "api_key=*API_KEY*"
 
-var numberOfPulls int = 0
+var numberOfPulls int
 
 //		*********	 SUMMONER SEARCH STRUCTS	*********		//
 type summoner struct {
-	ProfileIconId 		int
-	Name				string
-	Puuid				string
-	SummonerLevel		int
-	AccountId			string
-	Id					string
-	RevisionDate 		int
+	ProfileIconID int
+	Name          string
+	Puuid         string
+	SummonerLevel int
+	AccountID     string
+	ID            string
+	RevisionDate  int
 }
 
 //		*********	  MATCH HISTORY STRUCTS		*********		//
 type matchHistory struct {
-	Matches			[]match
-	EndIndex		int
-	StartIndex		int
-	TotalGames		int
+	Matches    []match
+	EndIndex   int
+	StartIndex int
+	TotalGames int
 }
 
 type match struct {
-	Lane			string
-	GameId			int
-	Champion		int
-	PlatformId		string
-	Timestamp		int
-	Queue			int
-	Role			string
-	Season			int
+	Lane       string
+	GameID     int
+	Champion   int
+	PlatformID string
+	Timestamp  int
+	Queue      int
+	Role       string
+	Season     int
 }
 
 //		*********	   MATCH STATS STRUCTS		*********		//
 type matchStats struct {
-	SeasonId				int
-	QueueId					int
-	GameId					int
-	ParticipantIdentities	[]participantIdentities
-	GameVersion				string
-	PlatformId				string
-	GameMode				string
-	MapId					int
-	GameType				string
+	SeasonID              int
+	QueueID               int
+	GameID                int
+	ParticipantIDentities []participantIDentities
+	GameVersion           string
+	PlatformID            string
+	GameMode              string
+	MapID                 int
+	GameType              string
 }
 
-type participantIdentities struct {
-	Player					player
-	ParticipantId			int
+type participantIDentities struct {
+	Player        player
+	ParticipantID int
 }
 
 type player struct {
-	CurrentPlatformId		string
-	SummonerName			string
-	MatchHistoryUri			string
-	PlatformId				string
-	CurrentAccountId		string
-	ProfileIcon				int
-	SummonerId				string
-	AccountId				string
+	CurrentPlatformID string
+	SummonerName      string
+	MatchHistoryURI   string
+	PlatformID        string
+	CurrentAccountID  string
+	ProfileIcon       int
+	SummonerID        string
+	AccountID         string
 }
 
 //		*********	  	TIMELINE STRUCTS		*********		//
 type timeline struct {
-	Frames				[]frame
-	FrameInterval		int
+	Frames        []frame
+	FrameInterval int
 }
 
 type frame struct {
-	Timestamp			int
-	ParticipantFrames	participantFrames
-	Events				[]timelineEvents
+	Timestamp         int
+	ParticipantFrames participantFrames
+	Events            []timelineEvents
 }
 
 type participantFrames struct {
-	ParticipantFrames1	singularParticipant
-	ParticipantFrames2	singularParticipant
-	ParticipantFrames3	singularParticipant
-	ParticipantFrames4	singularParticipant
-	ParticipantFrames5	singularParticipant
-	ParticipantFrames6	singularParticipant
-	ParticipantFrames7	singularParticipant
-	ParticipantFrames8	singularParticipant
-	ParticipantFrames9	singularParticipant
-	ParticipantFrames10	singularParticipant
+	ParticipantFrames1  singularParticipant
+	ParticipantFrames2  singularParticipant
+	ParticipantFrames3  singularParticipant
+	ParticipantFrames4  singularParticipant
+	ParticipantFrames5  singularParticipant
+	ParticipantFrames6  singularParticipant
+	ParticipantFrames7  singularParticipant
+	ParticipantFrames8  singularParticipant
+	ParticipantFrames9  singularParticipant
+	ParticipantFrames10 singularParticipant
 }
 
 type singularParticipant struct {
-	TotalGold			int
-	TeamScore			int
-	ParticipantId		int
-	Level				int
-	CurrentGold			int
-	MinionsKilled		int
-	DominionScore		int
-	Position			position
-	Xp					int
-	JungleMinionsKilled	int
+	TotalGold           int
+	TeamScore           int
+	ParticipantID       int
+	Level               int
+	CurrentGold         int
+	MinionsKilled       int
+	DominionScore       int
+	Position            position
+	Xp                  int
+	JungleMinionsKilled int
 }
 
 type position struct {
-	Y					int
-	X					int
+	Y int
+	X int
 }
 
 type timelineEvents struct {
-	EventType						string	`json:"eventType"`
-	TowerType						string	`json:"towerType"`
-	TeamId							int		`json:"teamId"`
-	AscendedType					string	`json:"ascendedType"`
-	KillerId						int		`json:"killerId"`
-	LevelUpType						string	`json:"levelUpType"`
-	PointCaptured					string	`json:"pointCaptured"`
-	AssistingParticipantIds			[]int	`json:"assistingParticipantIds"`
-	WardType						string	`json:"wardType"`
-	MonsterType						string	`json:"monsterType"`
-	Type							string	`json:"type"`
-	SkillSlot						int		`json:"skillSlot"`
-	VictimId						int		`json:"victimId"`
-	Timestamp						int64	`json:"timestamp"`
-	AfterId							int		`json:"afterId"`
-	MonsterSubType					string	`json:"monsterSubType"`
-	LaneType						string	`json:"laneType"`
-	ItemId							int		`json:"itemId"`
-	ParticipantId					int		`json:"participantId"`
-	BuildingType					string	`json:"buildingType"`
-	CreatorId						int		`json:"creatorId"`
-	Position						position`json:"position"`
-	BeforeId						int		`json:"beforeId"`
+	EventType               string   `json:"eventType"`
+	TowerType               string   `json:"towerType"`
+	TeamID                  int      `json:"teamID"`
+	AscendedType            string   `json:"ascendedType"`
+	KillerID                int      `json:"killerID"`
+	LevelUpType             string   `json:"levelUpType"`
+	PointCaptured           string   `json:"pointCaptured"`
+	AssistingParticipantIDs []int    `json:"assistingParticipantIDs"`
+	WardType                string   `json:"wardType"`
+	MonsterType             string   `json:"monsterType"`
+	Type                    string   `json:"type"`
+	SkillSlot               int      `json:"skillSlot"`
+	VictimID                int      `json:"victimID"`
+	Timestamp               int64    `json:"timestamp"`
+	AfterID                 int      `json:"afterID"`
+	MonsterSubType          string   `json:"monsterSubType"`
+	LaneType                string   `json:"laneType"`
+	ItemID                  int      `json:"itemID"`
+	ParticipantID           int      `json:"participantID"`
+	BuildingType            string   `json:"buildingType"`
+	CreatorID               int      `json:"creatorID"`
+	Position                position `json:"position"`
+	BeforeID                int      `json:"beforeID"`
 }
 
-func urlToStructSummoner(url string)summoner {
+func urlToStructSummoner(url string) summoner {
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -165,7 +169,7 @@ func urlToStructSummoner(url string)summoner {
 	return data
 }
 
-func urlToStructMatchHistory(url string)matchHistory {
+func urlToStructMatchHistory(url string) matchHistory {
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -185,7 +189,7 @@ func urlToStructMatchHistory(url string)matchHistory {
 	return dataStruct
 }
 
-func urlToStructMatchStats(url string)matchStats {
+func urlToStructMatchStats(url string) matchStats {
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -205,7 +209,7 @@ func urlToStructMatchStats(url string)matchStats {
 	return dataStruct
 }
 
-func urlToTimeline(url string)timeline {
+func urlToTimeline(url string) timeline {
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -225,107 +229,129 @@ func urlToTimeline(url string)timeline {
 	return dataStruct
 }
 
-func summonerSearch(name string) summoner{
+func summonerSearch(name string) summoner {
 	base := "https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/"
-	url := base+name+"?"+key
+	url := base + name + "?" + key
 	numberOfPulls++
 	return urlToStructSummoner(url)
 }
 
-func matchHistorySearch(name string, start int) matchHistory{
+func matchHistorySearch(name string, start int) matchHistory {
 	base := "https://euw1.api.riotgames.com/lol/match/v4/matchlists/by-account/"
 	filters := "queue=420&beginIndex=" + strconv.Itoa(start) + "&"
-	accountId := string(summonerSearch(name).AccountId)
-	url := base+accountId+"?"+filters+key
+	accountID := string(summonerSearch(name).AccountID)
+	url := base + accountID + "?" + filters + key
 	fmt.Println(url)
 	numberOfPulls++
 	return urlToStructMatchHistory(url)
 }
 
-func matchStatsSearch(matchId int) matchStats{
-	gameId  := strconv.Itoa(matchId)
+func matchStatsSearch(matchID int) matchStats {
+	gameID := strconv.Itoa(matchID)
 	base := "https://euw1.api.riotgames.com/lol/match/v4/matches/"
-	url := base+gameId+"?"+key
+	url := base + gameID + "?" + key
 	numberOfPulls++
 	return urlToStructMatchStats(url)
 }
 
-func timelineSearch(matchId int) timeline{
+func timelineSearch(matchID int) timeline {
 	base := "https://euw1.api.riotgames.com/lol/match/v4/timelines/by-match/"
-	url := base+strconv.Itoa(matchId)+"?"+key
+	url := base + strconv.Itoa(matchID) + "?" + key
 	numberOfPulls++
 	return urlToTimeline(url)
 }
 
 func main() {
 	sampleSize := 100
-	name := "lnsecure mid"
-	m := 0
+	name := "Clinto"
 	totalDeathsGraph := [60]float64{}
-	mH0 := matchHistorySearch(name,0)
-	mH1 := matchHistorySearch(name,100)
-	mH2 := matchHistorySearch(name,200)
-	mH3 := matchHistorySearch(name,300)
-	mH4 := matchHistorySearch(name,400)
-	mH5 := matchHistorySearch(name,500)
-	mH6 := matchHistorySearch(name,600)
-	mH7 := matchHistorySearch(name,700)
-	mH8 := matchHistorySearch(name,800)
-	mH9 := matchHistorySearch(name,900)
-	mH0.Matches = append(mH0.Matches, mH1.Matches...)
-	mH0.Matches = append(mH0.Matches, mH2.Matches...)
-	mH0.Matches = append(mH0.Matches, mH3.Matches...)
-	mH0.Matches = append(mH0.Matches, mH4.Matches...)
-	mH0.Matches = append(mH0.Matches, mH5.Matches...)
-	mH0.Matches = append(mH0.Matches, mH6.Matches...)
-	mH0.Matches = append(mH0.Matches, mH7.Matches...)
-	mH0.Matches = append(mH0.Matches, mH8.Matches...)
-	mH0.Matches = append(mH0.Matches, mH9.Matches...)
+	totalKillsGraph := [60]float64{}
+	totalAssistsGraph := [60]float64{}
+	mH0 := matchHistorySearch(name, 0)
 	fmt.Println(len(mH0.Matches))
 	summoner := summonerSearch(name)
-	summonerId := summoner.Id
-	time.Sleep(2*time.Minute)
-	for k := 0; k<sampleSize; k++ {
-		playerIdMatch := false
-		playerId := 0
-		matchStatistics := matchStatsSearch(mH0.Matches[k].GameId)
-		for l := 0; playerIdMatch==false; l++{
-			if matchStatistics.ParticipantIdentities[l].Player.SummonerId==summonerId {
-				playerId = matchStatistics.ParticipantIdentities[l].ParticipantId
-				playerIdMatch=true
-				}
+	summonerID := summoner.ID
+	for k := 0; k < sampleSize; k++ {
+		playerIDMatch := false
+		playerID := 0
+		matchStatistics := matchStatsSearch(mH0.Matches[k].GameID)
+		if len(matchStatistics.ParticipantIDentities) < 10 {
+			time.Sleep(2 * time.Minute)
+			matchStatistics = matchStatsSearch(mH0.Matches[k].GameID)
 		}
-		timeline := timelineSearch(mH0.Matches[k].GameId)
-		if numberOfPulls>95 {
-			time.Sleep(2*time.Minute)
+		for l := 0; playerIDMatch == false; l++ {
+			if matchStatistics.ParticipantIDentities[l].Player.SummonerID == summonerID {
+				playerID = matchStatistics.ParticipantIDentities[l].ParticipantID
+				playerIDMatch = true
+			}
+		}
+		timeline := timelineSearch(mH0.Matches[k].GameID)
+		if numberOfPulls > 95 {
+			time.Sleep(2 * time.Minute)
 			numberOfPulls = 0
 		}
 		fmt.Println(strconv.Itoa(k) + " games looked at")
 		for i := 0; i < len(timeline.Frames); i++ {
 			for j := 0; j < len(timeline.Frames[i].Events); j++ {
-				if timeline.Frames[i].Events[j].Type == "CHAMPION_KILL" && timeline.Frames[i].Events[j].VictimId == playerId {
+				if timeline.Frames[i].Events[j].Type == "CHAMPION_KILL" && timeline.Frames[i].Events[j].VictimID == playerID {
 					totalDeathsGraph[i]++
-					m++
 				}
+				if timeline.Frames[i].Events[j].Type == "CHAMPION_KILL" && timeline.Frames[i].Events[j].KillerID == playerID {
+					totalKillsGraph[i]++
+				}
+				for k := 0; k < len(timeline.Frames[i].Events[j].AssistingParticipantIDs); k++ {
+					if timeline.Frames[i].Events[j].Type == "CHAMPION_KILL" && timeline.Frames[i].Events[j].AssistingParticipantIDs[k] == playerID {
+						totalAssistsGraph[i]++
+					}
+				}
+
 			}
 		}
 	}
 
-	for i:=1; i< len(totalDeathsGraph); i++{
-		totalDeathsGraph[i]=totalDeathsGraph[i]/float64(sampleSize)
+	for i := 1; i < len(totalDeathsGraph); i++ {
+		totalDeathsGraph[i] = totalDeathsGraph[i] / float64(sampleSize)
 	}
+	for i := 1; i < len(totalKillsGraph); i++ {
+		totalKillsGraph[i] = totalKillsGraph[i] / float64(sampleSize)
+	}
+	for i := 1; i < len(totalAssistsGraph); i++ {
+		totalAssistsGraph[i] = totalAssistsGraph[i] / float64(sampleSize)
+	}
+
 	data := make(plotter.Values, 60)
-	for i:=0; i<60; i++ {
-		data[i]=totalDeathsGraph[i]
+	for i := 0; i < 60; i++ {
+		data[i] = totalDeathsGraph[i]
+	}
+	data2 := make(plotter.Values, 60)
+	for i := 0; i < 60; i++ {
+		data2[i] = totalKillsGraph[i]
+	}
+	data3 := make(plotter.Values, 60)
+	for i := 0; i < 60; i++ {
+		data3[i] = totalAssistsGraph[i]
 	}
 
 	p, err := plot.New()
 	if err != nil {
 		panic(err)
 	}
-	p.Title.Text = "Average deaths per min for: " + name
+	p2, err := plot.New()
+	if err != nil {
+		panic(err)
+	}
+	p3, err := plot.New()
+	if err != nil {
+		panic(err)
+	}
+
 	p.Y.Label.Text = "Average deaths per min over " + strconv.Itoa(sampleSize) + " ranked games"
+	p2.Y.Label.Text = "Average kills per min over " + strconv.Itoa(sampleSize) + " ranked games"
+	p3.Y.Label.Text = "Average assists per min over " + strconv.Itoa(sampleSize) + " ranked games"
+
 	p.X.Label.Text = "Minute"
+	p2.X.Label.Text = "Minute"
+	p3.X.Label.Text = "Minute"
 
 	w := vg.Points(10)
 
@@ -335,12 +361,66 @@ func main() {
 	}
 	barsA.LineStyle.Width = vg.Length(0)
 	barsA.Color = plotutil.Color(2)
-
-	p.Add(barsA)
-	p.Legend.Top = true
-	p.NominalX("0", "", "2", "", "4", "", "6", "", "8", "", "10", "", "12", "", "14", "", "16", "", "18", "", "20", "", "22", "", "24", "", "26", "", "28", "", "30", "", "32", "", "34", "", "36", "", "38", "", "40", "", "42", "", "44", "", "46", "", "48", "", "50", "", "52", "", "54", "", "56", "", "58", "", "60")
-
-	if err := p.Save(10*vg.Inch, 4*vg.Inch, "barchart.png"); err != nil {
+	barsB, err := plotter.NewBarChart(data2, w)
+	if err != nil {
 		panic(err)
 	}
+	barsB.LineStyle.Width = vg.Length(0)
+	barsB.Color = plotutil.Color(2)
+	barsC, err := plotter.NewBarChart(data3, w)
+	if err != nil {
+		panic(err)
+	}
+	barsC.LineStyle.Width = vg.Length(0)
+	barsC.Color = plotutil.Color(2)
+
+	p.Add(barsA)
+	p.NominalX("0", "", "2", "", "4", "", "6", "", "8", "", "10", "", "12", "", "14", "", "16", "", "18", "", "20", "", "22", "", "24", "", "26", "", "28", "", "30", "", "32", "", "34", "", "36", "", "38", "", "40", "", "42", "", "44", "", "46", "", "48", "", "50", "", "52", "", "54", "", "56", "", "58", "", "60")
+	p2.Add(barsB)
+	p2.NominalX("0", "", "2", "", "4", "", "6", "", "8", "", "10", "", "12", "", "14", "", "16", "", "18", "", "20", "", "22", "", "24", "", "26", "", "28", "", "30", "", "32", "", "34", "", "36", "", "38", "", "40", "", "42", "", "44", "", "46", "", "48", "", "50", "", "52", "", "54", "", "56", "", "58", "", "60")
+	p3.Add(barsC)
+	p3.NominalX("0", "", "2", "", "4", "", "6", "", "8", "", "10", "", "12", "", "14", "", "16", "", "18", "", "20", "", "22", "", "24", "", "26", "", "28", "", "30", "", "32", "", "34", "", "36", "", "38", "", "40", "", "42", "", "44", "", "46", "", "48", "", "50", "", "52", "", "54", "", "56", "", "58", "", "60")
+
+	plots := make([][]*plot.Plot, 3)
+	plots[0] = make([]*plot.Plot, 1)
+	plots[1] = make([]*plot.Plot, 1)
+	plots[2] = make([]*plot.Plot, 1)
+
+	plots[0][0] = p
+	plots[1][0] = p2
+	plots[2][0] = p3
+
+	img := vgimg.New(10*vg.Inch, 12*vg.Inch)
+	dc := draw.New(img)
+
+	t := draw.Tiles{
+		Rows:      3,
+		Cols:      1,
+		PadX:      vg.Millimeter,
+		PadY:      vg.Millimeter,
+		PadTop:    vg.Points(2),
+		PadBottom: vg.Points(2),
+		PadLeft:   vg.Points(2),
+		PadRight:  vg.Points(2),
+	}
+
+	canvases := plot.Align(plots, t, dc)
+	for j := 0; j < 3; j++ {
+		for i := 0; i < 1; i++ {
+			if plots[j][i] != nil {
+				plots[j][i].Draw(canvases[j][i])
+			}
+		}
+	}
+
+	write, err := os.Create("align.png")
+	if err != nil {
+		panic(err)
+	}
+	defer write.Close()
+	png := vgimg.PngCanvas{Canvas: img}
+	if _, err := png.WriteTo(write); err != nil {
+		panic(err)
+	}
+
 }
